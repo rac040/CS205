@@ -8,6 +8,8 @@ import lightgbm as lgb
 import csv
 import gc
 import time
+
+#Run sensor data compilation
 import compile_data
 
 #Window size in seconds
