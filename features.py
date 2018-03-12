@@ -1,4 +1,3 @@
-
 import os
 import sys
 PATH = os.path.dirname(os.path.abspath(__file__))
@@ -10,7 +9,10 @@ import csv
 import gc
 import time
 
+#Current session, unnecessary once all data is consolidated
 SESSION = 1
+#Window size in seconds
+WINDOW = 1
 DATA_DIR = PATH + '/Data/Session ' + str(SESSION) + '/data/'
 
 start = time.time()
@@ -27,7 +29,17 @@ accel_data = pd.read_csv(DATA_DIR + '1_android.sensor.accelerometer.data.csv',
                     'label': np.str})
 
 #Convert milliseconds to seconds for our window evaluation
-accel_data['timestamp_sec'] = accel_data['timestamp_millsec'].map(lambda x: int(float(x) * float(pow(10,-3))))
+def get_window(x):
+    if type(WINDOW) == int:
+        time_sec = int(float(x) * float(pow(10,-3)))
+    else:
+        time_sec = float(x) * float(pow(10,-3))
+
+    if time_sec % WINDOW == 0:
+        return time_sec
+    else:
+        return time_sec - (time_sec % WINDOW)
+accel_data['timestamp_sec'] = accel_data['timestamp_millsec'].map(get_window)
 accel_data['resultant_acc'] = np.sqrt(np.power(accel_data['acc_force_x_axis'],2) + np.power(accel_data['acc_force_y_axis'],2) + np.power(accel_data['acc_force_z_axis'],2))
 
 #Get acceleration data from file
@@ -42,7 +54,7 @@ linear_accel_data = pd.read_csv(DATA_DIR + '10_android.sensor.linear_acceleratio
                     'label': np.str})
 
 #Convert milliseconds to seconds for our window evaluation
-linear_accel_data['timestamp_sec'] = linear_accel_data['timestamp_millsec'].map(lambda x: int(float(x) * float(pow(10,-3))))
+linear_accel_data['timestamp_sec'] = linear_accel_data['timestamp_millsec'].map(get_window)
 linear_accel_data['resultant_lin_acc'] = np.sqrt(np.power(linear_accel_data['lin_acc_force_x_axis'],2) + np.power(linear_accel_data['lin_acc_force_y_axis'],2) + np.power(linear_accel_data['lin_acc_force_z_axis'],2))
 
 #Get our acceleration features together
