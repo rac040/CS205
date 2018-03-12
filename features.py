@@ -13,6 +13,7 @@ import time
 SESSION = 1
 #Window size in seconds
 WINDOW = 1
+ACCURACY_THRESH = 2
 DATA_DIR = PATH + '/Data/Session ' + str(SESSION) + '/data/'
 
 start = time.time()
@@ -41,6 +42,8 @@ def get_window(x):
         return time_sec - (time_sec % WINDOW)
 accel_data['timestamp_sec'] = accel_data['timestamp_millsec'].map(get_window)
 accel_data['resultant_acc'] = np.sqrt(np.power(accel_data['acc_force_x_axis'],2) + np.power(accel_data['acc_force_y_axis'],2) + np.power(accel_data['acc_force_z_axis'],2))
+#Cleans all values not in accuracy threshold
+accel_data = accel_data[accel_data.accuracy >= ACCURACY_THRESH]
 
 #Get acceleration data from file
 linear_accel_data = pd.read_csv(DATA_DIR + '10_android.sensor.linear_acceleration.data.csv',
@@ -56,12 +59,16 @@ linear_accel_data = pd.read_csv(DATA_DIR + '10_android.sensor.linear_acceleratio
 #Convert milliseconds to seconds for our window evaluation
 linear_accel_data['timestamp_sec'] = linear_accel_data['timestamp_millsec'].map(get_window)
 linear_accel_data['resultant_lin_acc'] = np.sqrt(np.power(linear_accel_data['lin_acc_force_x_axis'],2) + np.power(linear_accel_data['lin_acc_force_y_axis'],2) + np.power(linear_accel_data['lin_acc_force_z_axis'],2))
+#Cleans all values not in accuracy threshold
+linear_accel_data = linear_accel_data[linear_accel_data.accuracy >= ACCURACY_THRESH]
 
 #Get our acceleration features together
 acc_info = pd.DataFrame()
 acc_info['result_acc_mean'] = accel_data.groupby('timestamp_sec')['resultant_acc'].mean()
+acc_info['result_acc_median'] = accel_data.groupby('timestamp_sec')['resultant_acc'].median()
 acc_info['result_acc_std'] = accel_data.groupby('timestamp_sec')['resultant_acc'].std()
 acc_info['result_lin_acc_mean'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].mean()
+acc_info['result_lin_acc_median'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].median()
 acc_info['result_lin_acc_std'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].std()
 acc_info.reset_index(level=acc_info.index.names, inplace=True)
 
@@ -72,8 +79,6 @@ label = label.drop_duplicates(subset=['timestamp_sec'], keep='first')
 #make our training dataframe
 train = pd.merge(acc_info, label, on='timestamp_sec')
 
-
-
-
-
-
+#Write training features to file
+train.to_csv(PATH + '/Data/Processed/train_features.csv', index=False, mode='w')
+print("Feature extraction completed in ", round(time.time() - start,4), "seconds")
