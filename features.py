@@ -8,15 +8,15 @@ import lightgbm as lgb
 import csv
 import gc
 import time
+import compile_data
 
-#Current session, unnecessary once all data is consolidated
-SESSION = 1
 #Window size in seconds
 WINDOW = 1
 ACCURACY_THRESH = 2
-DATA_DIR = PATH + '/Data/Session ' + str(SESSION) + '/data/'
+DATA_DIR = PATH + '/Data/Compiled/'
 
 start = time.time()
+print("\nStarting feature extraction...")
 
 #Get acceleration data from file
 accel_data = pd.read_csv(DATA_DIR + '1_android.sensor.accelerometer.data.csv',
@@ -63,6 +63,7 @@ linear_accel_data['resultant_lin_acc'] = np.sqrt(np.power(linear_accel_data['lin
 linear_accel_data = linear_accel_data[linear_accel_data.accuracy >= ACCURACY_THRESH]
 
 #Get our acceleration features together
+print("Getting acceleration features...")
 acc_info = pd.DataFrame()
 acc_info['result_acc_mean'] = accel_data.groupby('timestamp_sec')['resultant_acc'].mean()
 acc_info['result_acc_median'] = accel_data.groupby('timestamp_sec')['resultant_acc'].median()
