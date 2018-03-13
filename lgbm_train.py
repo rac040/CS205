@@ -28,8 +28,10 @@ test_x = pd.read_csv(PATH + '/Data/Processed/test_features.csv',
 print("\tDone.")
 
 features = ['timestamp_sec', 'result_acc_mean', 'result_acc_median',
-            'result_acc_std', 'result_lin_acc_mean', 'result_lin_acc_median',
-            'result_lin_acc_std']
+            'result_acc_std', 'result_acc_max', 'result_acc_min',
+            'result_acc_cross_median', 'result_lin_acc_mean',
+            'result_lin_acc_median', 'result_lin_acc_std', 'result_lin_acc_max',
+            'result_lin_acc_min']
 
 #'comp_size', 'avg_diff', 'std_diff'
 #'orders_sum', 'days_since_prior_std','avg_basket', 'avg_reorder', 'num_unique_items',

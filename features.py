@@ -73,9 +73,32 @@ acc_info = pd.DataFrame()
 acc_info['result_acc_mean'] = accel_data.groupby('timestamp_sec')['resultant_acc'].mean()
 acc_info['result_acc_median'] = accel_data.groupby('timestamp_sec')['resultant_acc'].median()
 acc_info['result_acc_std'] = accel_data.groupby('timestamp_sec')['resultant_acc'].std()
+acc_info['result_acc_max'] = accel_data.groupby('timestamp_sec')['resultant_acc'].max()
+acc_info['result_acc_min'] = accel_data.groupby('timestamp_sec')['resultant_acc'].min()
+
+def cross_med(df):
+    median = df.median()
+    df = pd.DataFrame(df)
+
+    num_cross = 0
+    prev_val = None
+    for row in df.itertuples(index=False, name=None):
+        cur_val = row[0]
+        if prev_val != None:
+            if (cur_val > median and prev_val < median) or (cur_val < median and prev_val > median):
+                num_cross = num_cross + 1
+
+        prev_val = cur_val
+
+    return num_cross
+print("\tGetting accel_median crossings...")
+acc_info['result_acc_cross_median'] = accel_data.groupby('timestamp_sec')['resultant_acc'].apply(cross_med)
+
 acc_info['result_lin_acc_mean'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].mean()
 acc_info['result_lin_acc_median'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].median()
 acc_info['result_lin_acc_std'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].std()
+acc_info['result_lin_acc_max'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].max()
+acc_info['result_lin_acc_min'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].min()
 acc_info.reset_index(level=acc_info.index.names, inplace=True)
 
 #encode labels to categories
