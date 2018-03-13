@@ -64,10 +64,24 @@ bst = lgb.train(params, train_data, num_round, valid_sets=valid_data, verbose_ev
 del train_x
 
 print('Predicting......')
-pred = pd.DataFrame(bst.predict(test_x[features]))
-pred.columns = ['laying', 'null','sitting','standing','walking']
+results = pd.DataFrame(bst.predict(test_x[features]))
+#pred.columns = ['laying', 'null','sitting','standing','walking']
+results['pred_label'] = results.idxmax(axis=1)
+results['actual_label'] = test_x['cat_label']
+results['timestamp_sec'] = test_x['timestamp_sec']
+results.to_csv(DIR + 'lgbm_pred.csv', mode='w+', index=False)
 print('Prediction Done......')
-results = test_x.join(pred)
-results[['timestamp_sec', 'laying', 'null','sitting','standing','walking']].to_csv(DIR + 'lgbm_pred.csv', mode='w+', index=False)
+
+#Get a score for our results
+check_frame = results[['pred_label', 'actual_label']]
+num_predictions = len(check_frame)
+num_correct = 0
+
+for row in check_frame.itertuples(index=False, name=None):
+    if int(row[0]) == int(row[1]):
+        num_correct = num_correct + 1
+
+print("\nPercent of Predictions Correct:", (num_correct / num_predictions) * 100)
+
 end = time.time()
 print(str((end - start) / 60), "minutes")
