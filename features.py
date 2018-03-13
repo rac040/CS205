@@ -101,6 +101,32 @@ acc_info['result_lin_acc_max'] = linear_accel_data.groupby('timestamp_sec')['res
 acc_info['result_lin_acc_min'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].min()
 acc_info.reset_index(level=acc_info.index.names, inplace=True)
 
+
+#Get orientation data from file
+print("Getting orientation features...")
+orient_data = pd.read_csv(DATA_DIR + '3_android.sensor.orientation.data.csv',
+            names=['timestamp_millsec', 'orient_north_y', 'orient_rot_x',
+                     'oreint_rot_y', 'accuracy', 'label'],
+            dtype={'timestamp_millsec': np.uint64,
+                    'orient_north_y': np.float32,
+                    'orient_rot_x': np.float32,
+                    'oreint_rot_y': np.float32,
+                    'accuracy': np.int8,
+                    'label': 'category'})
+
+orient_data = orient_data[orient_data.accuracy >= ACCURACY_THRESH]
+orient_data['timestamp_sec'] = orient_data['timestamp_millsec'].map(get_window)
+orient_data['resultant_orient'] = np.sqrt(np.power(orient_data['orient_north_y'],
+                                                2) + np.power(orient_data['orient_rot_x'],
+                                                2) + np.power(orient_data['oreint_rot_y'],
+                                                2))
+#Orientation features
+orient_info = pd.DataFrame()
+orient_info['result_orient_mean'] = orient_data.groupby('timestamp_sec')['resultant_orient'].mean()
+orient_info['result_orient_median'] = orient_data.groupby('timestamp_sec')['resultant_orient'].median()
+orient_info['result_orient_std'] = orient_data.groupby('timestamp_sec')['resultant_orient'].std()
+orient_info.reset_index(level=orient_info.index.names, inplace=True)
+
 #encode labels to categories
 le = preprocessing.LabelEncoder()
 le.fit(accel_data['label'])
@@ -113,6 +139,7 @@ label = label.drop_duplicates(subset=['timestamp_sec'], keep='first')
 
 #make our training dataframe
 full_info = pd.merge(acc_info, label, on='timestamp_sec')
+full_info = pd.merge(full_info, orient_info, on='timestamp_sec')
 num_rows = len(full_info)
 div = int(num_rows / TEST_SPLIT)
 split_pos = num_rows - div
