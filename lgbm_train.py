@@ -62,9 +62,9 @@ del train_x
 
 print('Predicting......')
 pred = pd.DataFrame(bst.predict(test_x[features]))
-pred.columns = ['conf_1', 'conf_2','conf_3','conf_4','conf_5']
+pred.columns = ['laying', 'null','sitting','standing','walking']
 print('Prediction Done......')
 results = test_x.join(pred)
-results[['timestamp_sec', 'conf_1', 'conf_2','conf_3','conf_4','conf_5']].to_csv(DIR + 'lgbm_pred.csv', mode='w+', index=False)
+results[['timestamp_sec', 'laying', 'null','sitting','standing','walking']].to_csv(DIR + 'lgbm_pred.csv', mode='w+', index=False)
 end = time.time()
 print(str((end - start) / 60), "minutes")
