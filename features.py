@@ -13,7 +13,7 @@ import time
 import compile_data
 
 #Window size in seconds
-WINDOW = 1
+WINDOW = 4
 ACCURACY_THRESH = 2
 DATA_DIR = PATH + '/Data/Compiled/'
 
