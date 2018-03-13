@@ -5,6 +5,8 @@ PATH = os.path.dirname(os.path.abspath(__file__))
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
+from sklearn import preprocessing
+
 import csv
 import gc
 import time
@@ -15,6 +17,7 @@ import compile_data
 #Window size in seconds
 WINDOW = 1
 ACCURACY_THRESH = 2
+TEST_SPLIT = 10
 DATA_DIR = PATH + '/Data/Compiled/'
 
 start = time.time()
@@ -29,7 +32,7 @@ accel_data = pd.read_csv(DATA_DIR + '1_android.sensor.accelerometer.data.csv',
                     'acc_force_y_axis': np.float32,
                     'acc_force_z_axis': np.float32,
                     'accuracy': np.int8,
-                    'label': np.str})
+                    'label': 'category'})
 
 #Convert milliseconds to seconds for our window evaluation
 def get_window(x):
@@ -56,7 +59,7 @@ linear_accel_data = pd.read_csv(DATA_DIR + '10_android.sensor.linear_acceleratio
                     'lin_acc_force_y_axis': np.float32,
                     'lin_acc_force_z_axis': np.float32,
                     'accuracy': np.int8,
-                    'label': np.str})
+                    'label': 'category'})
 
 #Convert milliseconds to seconds for our window evaluation
 linear_accel_data['timestamp_sec'] = linear_accel_data['timestamp_millsec'].map(get_window)
@@ -75,13 +78,26 @@ acc_info['result_lin_acc_median'] = linear_accel_data.groupby('timestamp_sec')['
 acc_info['result_lin_acc_std'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].std()
 acc_info.reset_index(level=acc_info.index.names, inplace=True)
 
+#encode labels to categories
+le = preprocessing.LabelEncoder()
+le.fit(accel_data['label'])
+print("Classes:", list(le.classes_))
+accel_data['cat_label'] = le.transform(accel_data['label'])
+
 #Get our labels for each time window
-label = accel_data[['timestamp_sec','label']]
+label = accel_data[['timestamp_sec','cat_label']]
 label = label.drop_duplicates(subset=['timestamp_sec'], keep='first')
 
 #make our training dataframe
-train = pd.merge(acc_info, label, on='timestamp_sec')
+full_info = pd.merge(acc_info, label, on='timestamp_sec')
+num_rows = len(full_info)
+div = int(num_rows / TEST_SPLIT)
+split_pos = num_rows - div
+
+train = full_info[:split_pos]
+test = full_info[split_pos:]
 
 #Write training features to file
 train.to_csv(PATH + '/Data/Processed/train_features.csv', index=False, mode='w')
+test.to_csv(PATH + '/Data/Processed/test_features.csv', index=False, mode='w')
 print("Feature extraction completed in ", round(time.time() - start,4), "seconds")
