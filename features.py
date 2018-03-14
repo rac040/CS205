@@ -127,6 +127,25 @@ orient_info['result_orient_median'] = orient_data.groupby('timestamp_sec')['resu
 orient_info['result_orient_std'] = orient_data.groupby('timestamp_sec')['resultant_orient'].std()
 orient_info.reset_index(level=orient_info.index.names, inplace=True)
 
+#Get step counts from file
+print("Getting step count features...")
+#19_android.sensor.step_counter.data.csv
+step_data = pd.read_csv(DATA_DIR + '19_android.sensor.step_counter.data.csv',
+            names=['timestamp_millsec', 'steps', 'accuracy', 'label'],
+            dtype={'timestamp_millsec': np.uint64,
+                    'steps': np.uint64,
+                    'accuracy': np.int8,
+                    'label': 'category'})
+
+step_data = step_data[step_data.accuracy >= ACCURACY_THRESH]
+step_data['timestamp_sec'] = step_data['timestamp_millsec'].map(get_window)
+
+#step count features
+step_info = pd.DataFrame()
+step_info['steps_mean'] = step_data.groupby('timestamp_sec')['steps'].mean()
+step_info['steps_std'] = step_data.groupby('timestamp_sec')['steps'].std()
+step_info.reset_index(level=step_info.index.names, inplace=True)
+
 #encode labels to categories
 le = preprocessing.LabelEncoder()
 le.fit(accel_data['label'])
@@ -140,6 +159,10 @@ label = label.drop_duplicates(subset=['timestamp_sec'], keep='first')
 #make our training dataframe
 full_info = pd.merge(acc_info, label, on='timestamp_sec')
 full_info = pd.merge(full_info, orient_info, on='timestamp_sec')
+
+step_info = pd.merge(label, step_info, on='timestamp_sec', how='outer')
+full_info = pd.merge(full_info, step_info, on=['timestamp_sec', 'cat_label'], how='left')
+
 num_rows = len(full_info)
 div = int(num_rows / TEST_SPLIT)
 split_pos = num_rows - div

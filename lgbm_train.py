@@ -32,11 +32,9 @@ features = ['timestamp_sec', 'result_acc_mean', 'result_acc_median',
             'result_acc_cross_median', 'result_lin_acc_mean',
             'result_lin_acc_median', 'result_lin_acc_std', 'result_lin_acc_max',
             'result_lin_acc_min','result_orient_mean', 'result_orient_median',
-            'result_orient_std']
+            'result_orient_std','steps_mean']
+#steps_std doesn't seem to help, but steps_mean does slightly
 
-#'comp_size', 'avg_diff', 'std_diff'
-#'orders_sum', 'days_since_prior_std','avg_basket', 'avg_reorder', 'num_unique_items',
-#'comp_size', 'avg_diff', 'std_diff' 'order_ratio',
 # parameter for lgbt#0.38119
 params = {
     'task': 'train',
