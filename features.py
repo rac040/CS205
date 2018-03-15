@@ -5,6 +5,8 @@ PATH = os.path.dirname(os.path.abspath(__file__))
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
+from sklearn import preprocessing
+
 import csv
 import gc
 import time
@@ -15,6 +17,7 @@ import compile_data
 #Window size in seconds
 WINDOW = 4
 ACCURACY_THRESH = 2
+TEST_SPLIT = 10
 DATA_DIR = PATH + '/Data/Compiled/'
 
 start = time.time()
@@ -29,7 +32,7 @@ accel_data = pd.read_csv(DATA_DIR + '1_android.sensor.accelerometer.data.csv',
                     'acc_force_y_axis': np.float32,
                     'acc_force_z_axis': np.float32,
                     'accuracy': np.int8,
-                    'label': np.str})
+                    'label': 'category'})
 
 #Convert milliseconds to seconds for our window evaluation
 def get_window(x):
@@ -56,7 +59,7 @@ linear_accel_data = pd.read_csv(DATA_DIR + '10_android.sensor.linear_acceleratio
                     'lin_acc_force_y_axis': np.float32,
                     'lin_acc_force_z_axis': np.float32,
                     'accuracy': np.int8,
-                    'label': np.str})
+                    'label': 'category'})
 
 #Convert milliseconds to seconds for our window evaluation
 linear_accel_data['timestamp_sec'] = linear_accel_data['timestamp_millsec'].map(get_window)
@@ -70,18 +73,104 @@ acc_info = pd.DataFrame()
 acc_info['result_acc_mean'] = accel_data.groupby('timestamp_sec')['resultant_acc'].mean()
 acc_info['result_acc_median'] = accel_data.groupby('timestamp_sec')['resultant_acc'].median()
 acc_info['result_acc_std'] = accel_data.groupby('timestamp_sec')['resultant_acc'].std()
+acc_info['result_acc_max'] = accel_data.groupby('timestamp_sec')['resultant_acc'].max()
+acc_info['result_acc_min'] = accel_data.groupby('timestamp_sec')['resultant_acc'].min()
+
+def cross_med(df):
+    median = df.median()
+    df = pd.DataFrame(df)
+
+    num_cross = 0
+    prev_val = None
+    for row in df.itertuples(index=False, name=None):
+        cur_val = row[0]
+        if prev_val != None:
+            if (cur_val > median and prev_val < median) or (cur_val < median and prev_val > median):
+                num_cross = num_cross + 1
+
+        prev_val = cur_val
+
+    return num_cross
+print("\tGetting accel_median crossings...")
+acc_info['result_acc_cross_median'] = accel_data.groupby('timestamp_sec')['resultant_acc'].apply(cross_med)
+
 acc_info['result_lin_acc_mean'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].mean()
 acc_info['result_lin_acc_median'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].median()
 acc_info['result_lin_acc_std'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].std()
+acc_info['result_lin_acc_max'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].max()
+acc_info['result_lin_acc_min'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].min()
 acc_info.reset_index(level=acc_info.index.names, inplace=True)
 
+
+#Get orientation data from file
+print("Getting orientation features...")
+orient_data = pd.read_csv(DATA_DIR + '3_android.sensor.orientation.data.csv',
+            names=['timestamp_millsec', 'orient_north_y', 'orient_rot_x',
+                     'oreint_rot_y', 'accuracy', 'label'],
+            dtype={'timestamp_millsec': np.uint64,
+                    'orient_north_y': np.float32,
+                    'orient_rot_x': np.float32,
+                    'oreint_rot_y': np.float32,
+                    'accuracy': np.int8,
+                    'label': 'category'})
+
+orient_data = orient_data[orient_data.accuracy >= ACCURACY_THRESH]
+orient_data['timestamp_sec'] = orient_data['timestamp_millsec'].map(get_window)
+orient_data['resultant_orient'] = np.sqrt(np.power(orient_data['orient_north_y'],
+                                                2) + np.power(orient_data['orient_rot_x'],
+                                                2) + np.power(orient_data['oreint_rot_y'],
+                                                2))
+#Orientation features
+orient_info = pd.DataFrame()
+orient_info['result_orient_mean'] = orient_data.groupby('timestamp_sec')['resultant_orient'].mean()
+orient_info['result_orient_median'] = orient_data.groupby('timestamp_sec')['resultant_orient'].median()
+orient_info['result_orient_std'] = orient_data.groupby('timestamp_sec')['resultant_orient'].std()
+orient_info.reset_index(level=orient_info.index.names, inplace=True)
+
+#Get step counts from file
+print("Getting step count features...")
+#19_android.sensor.step_counter.data.csv
+step_data = pd.read_csv(DATA_DIR + '19_android.sensor.step_counter.data.csv',
+            names=['timestamp_millsec', 'steps', 'accuracy', 'label'],
+            dtype={'timestamp_millsec': np.uint64,
+                    'steps': np.uint64,
+                    'accuracy': np.int8,
+                    'label': 'category'})
+
+step_data = step_data[step_data.accuracy >= ACCURACY_THRESH]
+step_data['timestamp_sec'] = step_data['timestamp_millsec'].map(get_window)
+
+#step count features
+step_info = pd.DataFrame()
+step_info['steps_mean'] = step_data.groupby('timestamp_sec')['steps'].mean()
+step_info['steps_std'] = step_data.groupby('timestamp_sec')['steps'].std()
+step_info.reset_index(level=step_info.index.names, inplace=True)
+
+#encode labels to categories
+le = preprocessing.LabelEncoder()
+le.fit(accel_data['label'])
+print("Classes:", list(le.classes_))
+accel_data['cat_label'] = le.transform(accel_data['label'])
+
 #Get our labels for each time window
-label = accel_data[['timestamp_sec','label']]
+label = accel_data[['timestamp_sec','cat_label']]
 label = label.drop_duplicates(subset=['timestamp_sec'], keep='first')
 
 #make our training dataframe
-train = pd.merge(acc_info, label, on='timestamp_sec')
+full_info = pd.merge(acc_info, label, on='timestamp_sec')
+full_info = pd.merge(full_info, orient_info, on='timestamp_sec')
+
+step_info = pd.merge(label, step_info, on='timestamp_sec', how='outer')
+full_info = pd.merge(full_info, step_info, on=['timestamp_sec', 'cat_label'], how='left')
+
+num_rows = len(full_info)
+div = int(num_rows / TEST_SPLIT)
+split_pos = num_rows - div
+
+train = full_info[:split_pos]
+test = full_info[split_pos:]
 
 #Write training features to file
 train.to_csv(PATH + '/Data/Processed/train_features.csv', index=False, mode='w')
+test.to_csv(PATH + '/Data/Processed/test_features.csv', index=False, mode='w')
 print("Feature extraction completed in ", round(time.time() - start,4), "seconds")
