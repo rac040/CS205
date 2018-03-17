@@ -5,6 +5,7 @@ import glob
 import gzip
 
 PATH = os.path.dirname(os.path.abspath(__file__))
+
 TRAIN_DIR = PATH + '/Data/Sessions/'
 TEST_DIR = PATH + '/Data/test_data/'
 TRAIN_OUTPUT_DIR = PATH + '/Data/Compiled/Train/'

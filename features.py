@@ -10,12 +10,82 @@ from sklearn import preprocessing
 import csv
 import gc
 import time
+import scipy
+import scipy.fftpack
+from scipy import signal
 
 #Run sensor data compilation
 import compile_data
 
+def get_dom_freq(samples, timestep, threshold):
+    FFT = abs(scipy.fft(samples))
+    freqs = scipy.fftpack.fftfreq(samples.size, timestep)
+    idxs = np.where(np.logical_and(freqs>=threshold, freqs<=15))
+    FFT = FFT[idxs]
+    if FFT.size == 0:
+        return float('NaN')
+    freqs = freqs[idxs]
+    max_sig = np.where(FFT == max(FFT))
+    return freqs[max_sig][0]
+
+def get_freq_features(samples, timestep):
+    freqs, psd = signal.welch(samples, 1 / timestep)
+#    FFT_orig = abs(scipy.fft(samples))
+#    freqs = scipy.fftpack.fftfreq(samples.size, timestep)
+    idxs = np.where(np.logical_and(freqs>=0.3, freqs<=15))
+    psd_temp = psd[idxs]
+    if psd_temp.size <= 1:
+        return (float('NaN'),) * 8
+    
+#    if FFT.size <= 1:
+#        return [float('NaN')] * 8
+    freqs_temp = freqs[idxs]
+    max_sig_idx = psd_temp.argmax()
+
+    first_dom_freq = freqs_temp[max_sig_idx]
+    if max_sig_idx == 0:
+        freq_step = freqs_temp[1] - freqs_temp[0]
+    else:
+        freq_step = freqs_temp[max_sig_idx] - freqs_temp[max_sig_idx - 1]
+    
+    first_dom_pow = max(psd_temp) * freq_step
+#    psd = np.square(FFT)
+    tot_pow = np.trapz(psd_temp, freqs_temp)
+
+    #second dom freq
+    psd_temp[max_sig_idx] = 0
+    max_sig_idx = psd_temp.argmax()
+
+    if max_sig_idx == 0:
+        freq_step = freqs_temp[1] - freqs_temp[0]
+    else:
+        freq_step = freqs_temp[max_sig_idx] - freqs_temp[max_sig_idx - 1]
+    snd_dom_freq = freqs_temp[max_sig_idx]
+    snd_dom_pow = max(psd_temp) * freq_step
+
+
+    #third dom freq
+    idxs = np.where(np.logical_and(freqs>=0.6, freqs<=2.5))
+    psd_temp = psd[idxs]
+    if psd_temp.size <= 1:
+        return (float('NaN'),) * 8
+#    if FFT.size == 0:
+#        return [float('NaN')] * 8
+    freqs_temp = freqs[idxs]
+    max_sig_idx = psd_temp.argmax()
+
+    if max_sig_idx == 0:
+        freq_step = freqs_temp[1] - freqs_temp[0]
+    else:
+        freq_step = freqs_temp[max_sig_idx] - freqs_temp[max_sig_idx - 1]
+    third_dom_freq = freqs_temp[max_sig_idx]
+    third_dom_pow = max(psd_temp) * freq_step
+    ratio = first_dom_pow / tot_pow
+
+    return tot_pow, first_dom_freq, first_dom_pow, snd_dom_freq, snd_dom_pow, third_dom_freq, third_dom_pow, ratio
+
 #Window size in seconds
-WINDOW = 1
+WINDOW = 4
 ACCURACY_THRESH = 2
 TEST_SPLIT = 10
 
@@ -45,7 +115,6 @@ def get_features(isTrain = True):
             time_sec = int(float(x) * float(pow(10,-3)))
         else:
             time_sec = float(x) * float(pow(10,-3))
-
         if time_sec % WINDOW == 0:
             return time_sec
         else:
@@ -106,11 +175,39 @@ def get_features(isTrain = True):
     acc_info['result_lin_acc_std'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].std()
     acc_info['result_lin_acc_max'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].max()
     acc_info['result_lin_acc_min'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].min()
+
+    #Get frequency-domain info
+    print("\tGetting frequency domain info...")
+
+    acc_info['lin_timestep'] = linear_accel_data.groupby('timestamp_sec')['timestamp_millsec'].apply(lambda x: WINDOW / x.count())
+    acc_info['timestep'] = accel_data.groupby('timestamp_sec')['timestamp_millsec'].apply(lambda x: WINDOW / x.count())
+
+    linear_accel_data = pd.merge(linear_accel_data, acc_info, left_on = 'timestamp_sec', right_index=True)
+    linear_accel_data['resultant_lin_acc_no_mean'] = linear_accel_data['resultant_lin_acc'] - linear_accel_data['result_lin_acc_mean']
+    linear_accel_data = linear_accel_data.dropna()
+
+    acc_freq_lin_info = linear_accel_data.groupby('timestamp_sec')[['resultant_lin_acc_no_mean', 'lin_timestep']].apply(lambda x: get_freq_features(x['resultant_lin_acc_no_mean'], timestep = x['lin_timestep'].iloc[0]))
+    acc_freq_lin_info = acc_freq_lin_info.apply(pd.Series)
+    acc_freq_lin_info.columns = ['tot_lin_pow', 'fst_dom_lin_freq', 'fst_dom_lin_pow', 'snd_dom_lin_freq', 'snd_dom_lin_pow', 'third_dom_lin_freq', 'third_dom_lin_pow', 'ratio_lin']
+    acc_info = pd.merge(acc_info, acc_freq_lin_info, left_index=True, right_index=True)
+
+    accel_data = pd.merge(accel_data, acc_info, left_on = 'timestamp_sec', right_index=True)
+    accel_data['resultant_acc_no_mean'] = accel_data['resultant_acc'] - accel_data['result_acc_mean']
+    accel_data = accel_data.dropna()
+    acc_freq_info = accel_data.groupby('timestamp_sec')[['resultant_acc_no_mean', 'timestep']].apply(lambda x: get_freq_features(x['resultant_acc_no_mean'], timestep = x['timestep'].iloc[0]))
+
+    acc_freq_info = acc_freq_info.apply(pd.Series)
+    acc_freq_info.columns = ['tot_pow', 'fst_dom_freq', 'fst_dom_pow', 'snd_dom_freq', 'snd_dom_pow', 'third_dom_freq', 'third_dom_pow', 'ratio']
+    acc_info = pd.merge(acc_info, acc_freq_info, left_index=True, right_index = True)
+
+    acc_info = acc_info.dropna()
+
     acc_info.reset_index(level=acc_info.index.names, inplace=True)
 
 
     #Get orientation data from file
     print("Getting orientation features...")
+
     orient_data = pd.read_csv(DATA_DIR + '3_android.sensor.orientation.data.csv',
                 names=['timestamp_millsec', 'orient_north_y', 'orient_rot_x',
                          'oreint_rot_y', 'accuracy', 'label'],
@@ -123,7 +220,6 @@ def get_features(isTrain = True):
 
     orient_data = orient_data[orient_data.accuracy >= ACCURACY_THRESH]
     orient_data = orient_data[orient_data.label != 'null']
-    
     orient_data['timestamp_sec'] = orient_data['timestamp_millsec'].map(get_window)
     orient_data['resultant_orient'] = np.sqrt(np.power(orient_data['orient_north_y'],
                                                     2) + np.power(orient_data['orient_rot_x'],
@@ -163,7 +259,7 @@ def get_features(isTrain = True):
     accel_data['cat_label'] = le.transform(accel_data['label'])
 
     #Get our labels for each time window
-    label = accel_data[['timestamp_sec','cat_label']]
+    label = accel_data[['timestamp_sec','cat_label', 'label']]
     label = label.drop_duplicates(subset=['timestamp_sec'], keep='first')
 
     #make our training dataframe
@@ -188,3 +284,4 @@ print("Getting Training Features...")
 get_features(True)
 print("Getting Testing Features...")
 get_features(False)
+
