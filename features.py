@@ -54,6 +54,7 @@ def get_features(isTrain = True):
     accel_data['resultant_acc'] = np.sqrt(np.power(accel_data['acc_force_x_axis'],2) + np.power(accel_data['acc_force_y_axis'],2) + np.power(accel_data['acc_force_z_axis'],2))
     #Cleans all values not in accuracy threshold
     accel_data = accel_data[accel_data.accuracy >= ACCURACY_THRESH]
+    accel_data = accel_data[accel_data.label != 'null']
 
     #Get acceleration data from file
     linear_accel_data = pd.read_csv(DATA_DIR + '10_android.sensor.linear_acceleration.data.csv',
@@ -71,6 +72,7 @@ def get_features(isTrain = True):
     linear_accel_data['resultant_lin_acc'] = np.sqrt(np.power(linear_accel_data['lin_acc_force_x_axis'],2) + np.power(linear_accel_data['lin_acc_force_y_axis'],2) + np.power(linear_accel_data['lin_acc_force_z_axis'],2))
     #Cleans all values not in accuracy threshold
     linear_accel_data = linear_accel_data[linear_accel_data.accuracy >= ACCURACY_THRESH]
+    linear_accel_data = linear_accel_data[linear_accel_data.label != 'null']
 
     #Get our acceleration features together
     print("Getting acceleration features...")
@@ -120,6 +122,8 @@ def get_features(isTrain = True):
                         'label': 'category'})
 
     orient_data = orient_data[orient_data.accuracy >= ACCURACY_THRESH]
+    orient_data = orient_data[orient_data.label != 'null']
+    
     orient_data['timestamp_sec'] = orient_data['timestamp_millsec'].map(get_window)
     orient_data['resultant_orient'] = np.sqrt(np.power(orient_data['orient_north_y'],
                                                     2) + np.power(orient_data['orient_rot_x'],
@@ -143,6 +147,7 @@ def get_features(isTrain = True):
                         'label': 'category'})
 
     step_data = step_data[step_data.accuracy >= ACCURACY_THRESH]
+    step_data = step_data[step_data.label != 'null']
     step_data['timestamp_sec'] = step_data['timestamp_millsec'].map(get_window)
 
     #step count features

@@ -83,13 +83,7 @@ num_predictions = len(check_frame)
 num_correct = 0
 
 for row in check_frame.itertuples(index=False, name=None):
-    if int(row[0]) == 0 and int(row[1]) == 0:
-        num_correct = num_correct + 1
-    elif int(row[0]) == 2 and int(row[1]) == 1:
-        num_correct = num_correct + 1
-    elif int(row[0]) == 3 and int(row[1]) == 2:
-        num_correct = num_correct + 1
-    elif int(row[0]) == 4 and int(row[1]) == 3:
+    if int(row[0]) == int(row[1]):
         num_correct = num_correct + 1
 
 print("\nPercent of Predictions Correct:", (num_correct / num_predictions) * 100)
