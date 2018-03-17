@@ -28,7 +28,7 @@ for subdir, dirs, files in os.walk(TRAIN_DIR):
         if file.endswith(".gz"):
             filename = os.path.join(subdir, file)
             #print(filename)
-            sensor_name = (filename.split('T/data/')[1]).split(".gz")[0]
+            sensor_name = (filename.split('T\\data\\')[1]).split(".gz")[0]
             #print(sensor_name)
 
             with gzip.open(filename, 'r') as f:
@@ -49,7 +49,7 @@ for subdir, dirs, files in os.walk(TEST_DIR):
         if file.endswith(".gz"):
             filename = os.path.join(subdir, file)
             #print(filename)
-            sensor_name = (filename.split('T/data/')[1]).split(".gz")[0]
+            sensor_name = (filename.split('T\\data\\')[1]).split(".gz")[0]
             #print(sensor_name)
 
             with gzip.open(filename, 'r') as f:
