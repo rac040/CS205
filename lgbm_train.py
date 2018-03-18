@@ -52,7 +52,7 @@ params = {
     'max_depth': 7,
     'learning_rate': 0.004953,
     'num_leaves': 50,
-    'feature_fraction': 0.46,
+    'feature_fraction': 0.44,
     'bagging_fraction': 0.85,
     'bagging_freq': 17
 }

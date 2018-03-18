@@ -85,7 +85,7 @@ def get_freq_features(samples, timestep):
     return tot_pow, first_dom_freq, first_dom_pow, snd_dom_freq, snd_dom_pow, third_dom_freq, third_dom_pow, ratio
 
 #Window size in seconds
-WINDOW = 4
+WINDOW = 1
 ACCURACY_THRESH = 2
 TEST_SPLIT = 10
 
@@ -121,6 +121,7 @@ def get_features(isTrain = True):
             return time_sec - (time_sec % WINDOW)
     accel_data['timestamp_sec'] = accel_data['timestamp_millsec'].map(get_window)
     accel_data['resultant_acc'] = np.sqrt(np.power(accel_data['acc_force_x_axis'],2) + np.power(accel_data['acc_force_y_axis'],2) + np.power(accel_data['acc_force_z_axis'],2))
+    accel_data['fft']=np.square(np.real(fft(accel_data['resultant_acc'])))
     #Cleans all values not in accuracy threshold
     accel_data = accel_data[accel_data.accuracy >= ACCURACY_THRESH]
     accel_data = accel_data[accel_data.label != 'null']
@@ -151,6 +152,9 @@ def get_features(isTrain = True):
     acc_info['result_acc_std'] = accel_data.groupby('timestamp_sec')['resultant_acc'].std()
     acc_info['result_acc_max'] = accel_data.groupby('timestamp_sec')['resultant_acc'].max()
     acc_info['result_acc_min'] = accel_data.groupby('timestamp_sec')['resultant_acc'].min()
+    a=accel_data.groupby('timestamp_sec')
+    b=a.count()
+    acc_info['result_acc_energy']=accel_data.groupby('timestamp_sec')['fft'].sum()/b['timestamp_millsec']
 
     def cross_med(df):
         median = df.median()
@@ -284,4 +288,3 @@ print("Getting Training Features...")
 get_features(True)
 print("Getting Testing Features...")
 get_features(False)
-
