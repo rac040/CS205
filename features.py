@@ -121,7 +121,9 @@ def get_features(isTrain = True):
             return time_sec - (time_sec % WINDOW)
     accel_data['timestamp_sec'] = accel_data['timestamp_millsec'].map(get_window)
     accel_data['resultant_acc'] = np.sqrt(np.power(accel_data['acc_force_x_axis'],2) + np.power(accel_data['acc_force_y_axis'],2) + np.power(accel_data['acc_force_z_axis'],2))
-    accel_data['fft']=np.square(np.real(fft(accel_data['resultant_acc'])))
+
+    print("\tGetting fft...")
+    #accel_data['fft']=np.square(np.real(scipy.fft(accel_data['resultant_acc'])))
     #Cleans all values not in accuracy threshold
     accel_data = accel_data[accel_data.accuracy >= ACCURACY_THRESH]
     accel_data = accel_data[accel_data.label != 'null']
@@ -154,7 +156,7 @@ def get_features(isTrain = True):
     acc_info['result_acc_min'] = accel_data.groupby('timestamp_sec')['resultant_acc'].min()
     a=accel_data.groupby('timestamp_sec')
     b=a.count()
-    acc_info['result_acc_energy']=accel_data.groupby('timestamp_sec')['fft'].sum()/b['timestamp_millsec']
+    #acc_info['result_acc_energy']=accel_data.groupby('timestamp_sec')['fft'].sum()/b['timestamp_millsec']
 
     def cross_med(df):
         median = df.median()
