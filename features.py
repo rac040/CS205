@@ -85,7 +85,7 @@ def get_freq_features(samples, timestep):
     return tot_pow, first_dom_freq, first_dom_pow, snd_dom_freq, snd_dom_pow, third_dom_freq, third_dom_pow, ratio
 
 #Window size in seconds
-WINDOW = 4
+WINDOW = 2
 ACCURACY_THRESH = 2
 TEST_SPLIT = 10
 DATA_DIR = PATH + '/Data/Compiled/'
@@ -197,6 +197,7 @@ for (idx, dir) in enumerate(dirs):
     acc_freq_info = accel_data.groupby('timestamp_sec')[['resultant_acc_no_mean', 'timestep']].apply(lambda x: get_freq_features(x['resultant_acc_no_mean'], timestep = x['timestep'].iloc[0]))
 
     acc_freq_info = acc_freq_info.apply(pd.Series)
+    print(acc_freq_info.head())
     acc_freq_info.columns = ['tot_pow', 'fst_dom_freq', 'fst_dom_pow', 'snd_dom_freq', 'snd_dom_pow', 'third_dom_freq', 'third_dom_pow', 'ratio']
     acc_info = pd.merge(acc_info, acc_freq_info, left_index=True, right_index = True)
 

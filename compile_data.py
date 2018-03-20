@@ -13,7 +13,8 @@ TEST_DIR = PATH + '/Data/Test/'
 
 #Remove old compiled files
 print("Removing old compiled files...")
-files = glob.glob(OUTPUT_DIR + '*')
+files = glob.glob(OUTPUT_DIR + '*.csv')
+print(files)
 for f in files:
     os.remove(f)
 
