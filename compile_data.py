@@ -6,15 +6,17 @@ import gzip
 
 PATH = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = PATH + '/Data/Sessions/'
-TEST_DATA_DIR = PATH + '/Data/TestSessions/'
-OUTPUT_DIR = PATH + '/Data/Compiled/'
-TEST_DIR = PATH + '/Data/Test/'
+TEST_DATA_DIR = PATH + '/Data/test_data/'
+OUTPUT_DIR = PATH + '/Data/Compiled/Train/'
+TEST_DIR = PATH + '/Data/Compiled/Test/'
 #\Data\Sessions\14442D38F8ACC8E_Fri_Mar_09_09-21_2018_PST\data
 
-#Remove old compiled files
 print("Removing old compiled files...")
 files = glob.glob(OUTPUT_DIR + '*.csv')
-print(files)
+for f in files:
+    os.remove(f)
+
+files = glob.glob(TEST_DIR + '*.csv')
 for f in files:
     os.remove(f)
 
@@ -35,7 +37,7 @@ for subdir, dirs, files in os.walk(DATA_DIR):
                     wfile.close()
                     
                 except EOFError:
-                    #print("ERROR READING:", filename)
+                    print("ERROR READING:", filename)
                     pass
 
                 f.close()
@@ -57,7 +59,7 @@ for subdir, dirs, files in os.walk(TEST_DATA_DIR):
                     wfile.close()
                 
                 except EOFError:
-                    #print("ERROR READING:", filename)
+                    print("ERROR READING:", filename)
                     pass
                 
                 f.close()

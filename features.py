@@ -88,8 +88,8 @@ def get_freq_features(samples, timestep):
 WINDOW = 2
 ACCURACY_THRESH = 2
 TEST_SPLIT = 10
-DATA_DIR = PATH + '/Data/Compiled/'
-TEST_DATA_DIR = PATH + '/Data/Test/'
+DATA_DIR = PATH + '/Data/Compiled/Train/'
+TEST_DATA_DIR = PATH + '/Data/Compiled/Test/'
 OUTFILE = PATH + '/Data/Processed/train_features.csv'
 TEST_OUTFILE = PATH + '/Data/Processed/test_features.csv'
 start = time.time()
