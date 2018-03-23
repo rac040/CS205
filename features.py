@@ -289,4 +289,4 @@ def get_features(isTrain = True):
 print("Getting Training Features...")
 get_features(True)
 print("Getting Testing Features...")
-get_features(False)
+#get_features(False)
