@@ -27,19 +27,12 @@ test_x = pd.read_csv(PATH + '/Data/Processed/test_features.csv',
                         'cat_label': 'category'})
 print("\tDone.")
 
-features = ['timestamp_sec','result_acc_mean', 'result_acc_median',
+features = ['timestamp_sec', 'result_acc_mean', 'result_acc_median',
             'result_acc_std', 'result_acc_max', 'result_acc_min',
             'result_acc_cross_median', 'result_lin_acc_mean',
             'result_lin_acc_median', 'result_lin_acc_std', 'result_lin_acc_max',
             'result_lin_acc_min','result_orient_mean', 'result_orient_median',
-            'result_orient_std']
-
-#'result_acc_mean', 'result_acc_median',
-#            'result_acc_std', 'result_acc_max', 'result_acc_min',
-#            'result_acc_cross_median', 'result_lin_acc_mean',
-#            'result_lin_acc_median', 'result_lin_acc_std', 'result_lin_acc_max',
-#            'result_lin_acc_min','result_orient_mean', 'result_orient_median',
-#            'result_orient_std','steps_mean'
+            'result_orient_std','steps_mean']
 #steps_std doesn't seem to help, but steps_mean does slightly
 
 # parameter for lgbt#0.38119
@@ -48,13 +41,13 @@ params = {
     'boosting_type': 'gbdt',
     'objective': 'multiclass',
     'num_class': 5,
-    'metric': 'multi_logloss',
-    'max_depth': 7,
-    'learning_rate': 0.004953,
-    'num_leaves': 50,
-    'feature_fraction': 0.46,
-    'bagging_fraction': 0.85,
-    'bagging_freq': 17
+    'metric': {'multi_logloss'},
+    'max_depth': 5,
+    'learning_rate': 0.05,
+    'num_leaves': 32,
+    'feature_fraction': 0.9,
+    'bagging_fraction': 0.95,
+    'bagging_freq': 5
 }
 num_round = 120
 
@@ -89,4 +82,4 @@ for row in check_frame.itertuples(index=False, name=None):
 print("\nPercent of Predictions Correct:", (num_correct / num_predictions) * 100)
 
 end = time.time()
-print(str(round(((end - start) / 60), 6)), "minutes")
+print(str((end - start) / 60), "minutes")

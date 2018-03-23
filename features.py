@@ -85,21 +85,21 @@ def get_freq_features(samples, timestep):
     return tot_pow, first_dom_freq, first_dom_pow, snd_dom_freq, snd_dom_pow, third_dom_freq, third_dom_pow, ratio
 
 #Window size in seconds
-WINDOW = 4
+WINDOW = 2
 ACCURACY_THRESH = 2
 TEST_SPLIT = 10
-
-def get_features(isTrain = True):
-    if isTrain:
-        DATA_DIR = PATH + '/Data/Compiled/Train/'
-    else:
-        DATA_DIR = PATH + '/Data/Compiled/Test/'
-
-    start = time.time()
-    print("\nStarting feature extraction...")
-
+DATA_DIR = PATH + '/Data/Compiled/Train/'
+TEST_DATA_DIR = PATH + '/Data/Compiled/Test/'
+OUTFILE = PATH + '/Data/Processed/train_features.csv'
+TEST_OUTFILE = PATH + '/Data/Processed/test_features.csv'
+start = time.time()
+print("\nStarting feature extraction...")
+dirs = [DATA_DIR, TEST_DATA_DIR]
+outfiles = [OUTFILE, TEST_OUTFILE]
+for (idx, dir) in enumerate(dirs):
+    outfile = outfiles[idx]
     #Get acceleration data from file
-    accel_data = pd.read_csv(DATA_DIR + '1_android.sensor.accelerometer.data.csv',
+    accel_data = pd.read_csv(dir + '1_android.sensor.accelerometer.data.csv',
                 names=['timestamp_millsec', 'acc_force_x_axis', 'acc_force_y_axis',
                          'acc_force_z_axis', 'accuracy', 'label'],
                 dtype={'timestamp_millsec': np.uint64,
@@ -115,6 +115,7 @@ def get_features(isTrain = True):
             time_sec = int(float(x) * float(pow(10,-3)))
         else:
             time_sec = float(x) * float(pow(10,-3))
+
         if time_sec % WINDOW == 0:
             return time_sec
         else:
@@ -123,10 +124,9 @@ def get_features(isTrain = True):
     accel_data['resultant_acc'] = np.sqrt(np.power(accel_data['acc_force_x_axis'],2) + np.power(accel_data['acc_force_y_axis'],2) + np.power(accel_data['acc_force_z_axis'],2))
     #Cleans all values not in accuracy threshold
     accel_data = accel_data[accel_data.accuracy >= ACCURACY_THRESH]
-    accel_data = accel_data[accel_data.label != 'null']
 
     #Get acceleration data from file
-    linear_accel_data = pd.read_csv(DATA_DIR + '10_android.sensor.linear_acceleration.data.csv',
+    linear_accel_data = pd.read_csv(dir + '10_android.sensor.linear_acceleration.data.csv',
                 names=['timestamp_millsec', 'lin_acc_force_x_axis', 'lin_acc_force_y_axis',
                          'lin_acc_force_z_axis', 'accuracy', 'label'],
                 dtype={'timestamp_millsec': np.uint64,
@@ -141,7 +141,6 @@ def get_features(isTrain = True):
     linear_accel_data['resultant_lin_acc'] = np.sqrt(np.power(linear_accel_data['lin_acc_force_x_axis'],2) + np.power(linear_accel_data['lin_acc_force_y_axis'],2) + np.power(linear_accel_data['lin_acc_force_z_axis'],2))
     #Cleans all values not in accuracy threshold
     linear_accel_data = linear_accel_data[linear_accel_data.accuracy >= ACCURACY_THRESH]
-    linear_accel_data = linear_accel_data[linear_accel_data.label != 'null']
 
     #Get our acceleration features together
     print("Getting acceleration features...")
@@ -176,6 +175,7 @@ def get_features(isTrain = True):
     acc_info['result_lin_acc_max'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].max()
     acc_info['result_lin_acc_min'] = linear_accel_data.groupby('timestamp_sec')['resultant_lin_acc'].min()
 
+
     #Get frequency-domain info
     print("\tGetting frequency domain info...")
 
@@ -197,6 +197,7 @@ def get_features(isTrain = True):
     acc_freq_info = accel_data.groupby('timestamp_sec')[['resultant_acc_no_mean', 'timestep']].apply(lambda x: get_freq_features(x['resultant_acc_no_mean'], timestep = x['timestep'].iloc[0]))
 
     acc_freq_info = acc_freq_info.apply(pd.Series)
+    print(acc_freq_info.head())
     acc_freq_info.columns = ['tot_pow', 'fst_dom_freq', 'fst_dom_pow', 'snd_dom_freq', 'snd_dom_pow', 'third_dom_freq', 'third_dom_pow', 'ratio']
     acc_info = pd.merge(acc_info, acc_freq_info, left_index=True, right_index = True)
 
@@ -207,8 +208,7 @@ def get_features(isTrain = True):
 
     #Get orientation data from file
     print("Getting orientation features...")
-
-    orient_data = pd.read_csv(DATA_DIR + '3_android.sensor.orientation.data.csv',
+    orient_data = pd.read_csv(dir + '3_android.sensor.orientation.data.csv',
                 names=['timestamp_millsec', 'orient_north_y', 'orient_rot_x',
                          'oreint_rot_y', 'accuracy', 'label'],
                 dtype={'timestamp_millsec': np.uint64,
@@ -219,7 +219,6 @@ def get_features(isTrain = True):
                         'label': 'category'})
 
     orient_data = orient_data[orient_data.accuracy >= ACCURACY_THRESH]
-    orient_data = orient_data[orient_data.label != 'null']
     orient_data['timestamp_sec'] = orient_data['timestamp_millsec'].map(get_window)
     orient_data['resultant_orient'] = np.sqrt(np.power(orient_data['orient_north_y'],
                                                     2) + np.power(orient_data['orient_rot_x'],
@@ -235,7 +234,7 @@ def get_features(isTrain = True):
     #Get step counts from file
     print("Getting step count features...")
     #19_android.sensor.step_counter.data.csv
-    step_data = pd.read_csv(DATA_DIR + '19_android.sensor.step_counter.data.csv',
+    step_data = pd.read_csv(dir + '19_android.sensor.step_counter.data.csv',
                 names=['timestamp_millsec', 'steps', 'accuracy', 'label'],
                 dtype={'timestamp_millsec': np.uint64,
                         'steps': np.uint64,
@@ -243,7 +242,6 @@ def get_features(isTrain = True):
                         'label': 'category'})
 
     step_data = step_data[step_data.accuracy >= ACCURACY_THRESH]
-    step_data = step_data[step_data.label != 'null']
     step_data['timestamp_sec'] = step_data['timestamp_millsec'].map(get_window)
 
     #step count features
@@ -269,19 +267,6 @@ def get_features(isTrain = True):
     step_info = pd.merge(label, step_info, on='timestamp_sec', how='outer')
     full_info = pd.merge(full_info, step_info, on=['timestamp_sec', 'cat_label'], how='left')
 
-    num_rows = len(full_info)
-    div = int(num_rows / TEST_SPLIT)
-    split_pos = num_rows - div
-
     #Write training features to file
-    if isTrain:
-        full_info.to_csv(PATH + '/Data/Processed/train_features.csv', index=False, mode='w')
-    else: 
-        full_info.to_csv(PATH + '/Data/Processed/test_features.csv', index=False, mode='w')
-    print("Feature extraction completed in ", round(time.time() - start,4), "seconds")
-
-print("Getting Training Features...")
-get_features(True)
-print("Getting Testing Features...")
-get_features(False)
-
+    full_info.to_csv(outfile, index=False, mode='w')
+print("Feature extraction completed in ", round(time.time() - start,4), "seconds")
